@@ -1,5 +1,5 @@
 import { ProductCategory } from "./model/product_category";
-import { initializeApp } from "firebase-admin";
+import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { onRequest } from "firebase-functions/v2/https";
 import { Product } from "./model/product";
@@ -18,16 +18,23 @@ exports.setProduct = onRequest(
   },
   async (req, res) => {
     try {
+      log("Product set function called");
+      log(req.body);
       // Fetch category and product from body
-      const category = req.body.category as ProductCategory;
-      const product = req.body.product as Product;
+      const category: ProductCategory = JSON.parse(req.body.data.category);
+      log(category)
+      const product: Product = JSON.parse(req.body.data.product);
+      log(product)
 
       // Initiate collection references
       const categoryRef = db.collection("product_category");
       const summaryRef = db.collection("transaction_summary");
 
       // Check if the product with the same SKU already exists
+      log(category.products)
+      log(product.sku)
       const existingProduct = category.products[product.sku];
+      log(existingProduct)
 
       if (existingProduct) {
         // Update the existing product
@@ -67,9 +74,10 @@ exports.setProduct = onRequest(
           products: newProducts,
         });
       }
-
+      log(`Product set successful ${product.sku}`);
       res.status(200).send(product);
     } catch (error) {
+      log(error);
       res.status(500).send({
         message: "Internal server error",
         error: error,
@@ -147,15 +155,16 @@ async function updateTransactionSummary(
   const daySummary = transactionDaySummaries[date] ?? {
     [date]: {
       date: date,
-      total: data
-      profit: data.profit,
+      total: 0,
+      profit: 0,
       expense: 0,
     },
   };
   const modifiedDaySummary: TransactionDaySummary = {
     ...daySummary,
-    total: daySummary.total + data.total,
-    profit: daySummary.profit + data.profit,
+    expense:
+      daySummary.expense +
+      data.items.reduce((acc, item) => acc + item.buy_price * item.quantity, 0),
   };
   transactionDaySummaries[date] = modifiedDaySummary;
   await summaryRef.doc(summary.uuid).update({

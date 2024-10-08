@@ -82,8 +82,8 @@ async function updateTransactionSummary(
   const daySummary = transactionDaySummaries[date] ?? {
     [date]: {
       date: date,
-      total: data.total,
-      profit: data.profit,
+      total: 0,
+      profit: 0,
       expense: 0,
     },
   };
