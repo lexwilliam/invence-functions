@@ -6,7 +6,7 @@ export type ProductCategory = {
   branch_uuid: string;
   name: string;
   image_url: string;
-  products: { [key: string]: Product };
+  products: Map<string, Product>;
   created_at: Timestamp;
-  deleted_at: Timestamp;
+  deleted_at: Timestamp | null;
 };

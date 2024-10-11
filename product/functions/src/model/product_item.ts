@@ -5,5 +5,5 @@ export type ProductItem = {
     quantity: number;
     buy_price: number;
     created_at: Timestamp;
-    deleted_at: Timestamp;
+    deleted_at: Timestamp | null;
 }

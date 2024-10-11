@@ -2,12 +2,17 @@ import { ProductCategory } from "./model/product_category";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { onRequest } from "firebase-functions/v2/https";
-import { Product } from "./model/product";
 import { formatMonth, formatDate } from "./util/date_formatter";
 import { TransactionSummary } from "./model/transaction_summary";
 import { TransactionDaySummary } from "./model/transaction_day_summary";
 import { log } from "firebase-functions/logger";
 import { v4 as uuid } from "uuid";
+import {
+  MapProductCategoryFromJson,
+  ProductCategoryDto,
+} from "./model/dto/product_category_dto";
+import { MapProductFromJson, ProductDto } from "./model/dto/product_dto";
+import { Product } from "./model/product";
 
 initializeApp();
 const db = getFirestore();
@@ -19,22 +24,21 @@ exports.setProduct = onRequest(
   async (req, res) => {
     try {
       log("Product set function called");
-      log(req.body);
+
       // Fetch category and product from body
-      const category: ProductCategory = JSON.parse(req.body.data.category);
-      log(category)
-      const product: Product = JSON.parse(req.body.data.product);
-      log(product)
+      const category: ProductCategory = MapProductCategoryFromJson(
+        JSON.parse(req.body.data.category) as ProductCategoryDto
+      );
+      const product: Product = MapProductFromJson(
+        JSON.parse(req.body.data.product) as ProductDto
+      );
 
       // Initiate collection references
       const categoryRef = db.collection("product_category");
       const summaryRef = db.collection("transaction_summary");
 
       // Check if the product with the same SKU already exists
-      log(category.products)
-      log(product.sku)
-      const existingProduct = category.products[product.sku];
-      log(existingProduct)
+      const existingProduct = category.products.get(product.sku);
 
       if (existingProduct) {
         // Update the existing product
@@ -53,7 +57,11 @@ exports.setProduct = onRequest(
 
         const transactionSummary = await summaryRef
           .where("branch_uuid", "==", category.branch_uuid)
-          .where("date", "==", formatMonth(product.updated_at))
+          .where(
+            "date",
+            "==",
+            formatMonth(product.updated_at ?? product.created_at)
+          )
           .get();
 
         handleTransactionSummary(
@@ -73,7 +81,24 @@ exports.setProduct = onRequest(
         await categoryRef.doc(category.uuid).update({
           products: newProducts,
         });
+
+        const transactionSummary = await summaryRef
+          .where("branch_uuid", "==", category.branch_uuid)
+          .where(
+            "date",
+            "==",
+            formatMonth(product.updated_at ?? product.created_at)
+          )
+          .get();
+
+        handleTransactionSummary(
+          summaryRef,
+          transactionSummary,
+          category.branch_uuid,
+          product
+        );
       }
+
       log(`Product set successful ${product.sku}`);
       res.status(200).send(product);
     } catch (error) {

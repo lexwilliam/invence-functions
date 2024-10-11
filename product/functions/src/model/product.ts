@@ -1,5 +1,5 @@
 import { Timestamp } from "firebase-admin/firestore";
-import { ProductItem } from "./product_item";
+import {  ProductItem } from "./product_item";
 
 export type Product = {
     sku: string;
@@ -11,5 +11,5 @@ export type Product = {
     items: ProductItem[];
     image_path: string;
     created_at: Timestamp;
-    updated_at: Timestamp;
+    updated_at: Timestamp | null;
 }
